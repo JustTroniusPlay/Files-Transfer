@@ -1,0 +1,15 @@
+.vscode/
+TestFolder/
+build/
+CMakeFiles/
+
+main.exe
+FilesTransfer.exe
+
+testing.txt
+links.txt
+CMakeCache.txt
+
+cmake_install.cmake
+
+Makefile
