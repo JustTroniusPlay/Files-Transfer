@@ -19,7 +19,7 @@ void reader(string, vector<string>&);
 void saver(string, const vector<string>&);
 void saver_multi(string, const vector<string>&, int simult);
 void multi_clear(CURL**, CURLM*, int);
-int pos_finder(const string&);
+int pos_finder(const string&, char);
 string dir_creator(string);
 size_t write_data(void *, size_t, size_t, FILE *);
 static double diffclock(clock_t, clock_t);
@@ -69,12 +69,12 @@ string dir_creator(string path_to_dir)
     return path_to_dir;
 }
 
-int pos_finder(const string& str)
+int pos_finder(const string& str, char symbol)
 {
     int index = 0;
     for(int i = str.length() - 1; i > 0; i--)
     {
-        if(str[i] == '/' && !(i + 1 > str.length()))
+        if(str[i] == symbol && !(i + 1 > str.length()))
         {
             index = i + 1;
             break;
@@ -120,14 +120,31 @@ void saver(string path_to_dir,  const vector<string>&list)
             curl_easy_setopt(curl, CURLOPT_URL, url);
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);                
 
-            int index = pos_finder(str);
-            string tmp = str.substr(index, str.length() - 1);
+            int index = pos_finder(str, '/');
+            string file_name = str.substr(index, str.length() - 1);
             for(int ch_ind = 0; ch_ind < 10; ch_ind++)
             {
-                std::replace(tmp.begin(), tmp.end(), proh_symb[ch_ind], '_');
+                std::replace(file_name.begin(), file_name.end(), proh_symb[ch_ind], '_');
             }
-            string to_save = path_to_dir + "\\" + tmp;
+            string to_save = path_to_dir + "\\" + file_name;
             const char* to_dir = to_save.c_str();
+
+            FILE *check = fopen(to_dir,"r");
+            int copy_idx = 1;
+            while(check)
+            {
+                int point_idx = pos_finder(file_name, '.');
+                string file_format = file_name.substr(point_idx, file_name.length() - 1);
+                string file_true_name = file_name.substr(0, point_idx - 1);
+                string idx = std::to_string(copy_idx);
+                to_save = path_to_dir + "\\" + file_true_name + '(' + idx + ')' + '.' + file_format;
+                to_dir = to_save.c_str();
+                check = fopen(to_dir, "r");
+                if(check)
+                {
+                    copy_idx++;
+                }
+            }
 
             FILE *file = fopen(to_dir, "wb");
             if(!file)
@@ -178,7 +195,7 @@ void saver_multi(string path_to_dir, const vector<string>& list, int simult)
     CURLM *multi = curl_multi_init();
     curl_multi_setopt(multi, CURLMOPT_MAXCONNECTS, simult);
     char proh_symb[] = {'\\', '/', ':', '*', '?', '\"','<', '>', '|', '+'};
-    int added_file;
+    int added_file = simult;
 
     if(simult > list.size())
     {
@@ -188,11 +205,13 @@ void saver_multi(string path_to_dir, const vector<string>& list, int simult)
     int url_index = 0;
     while(lenght != 0)
     {
+        added_file = simult;
         if(simult > lenght)
         {
             simult = lenght;
+            added_file = simult;
         }
-        
+        cout << "Starting adding files to que." << endl << endl;
         for(int i_curl = 0; i_curl < simult; i_curl++)
         {
             curl_arr[i_curl] = curl_easy_init();
@@ -203,15 +222,32 @@ void saver_multi(string path_to_dir, const vector<string>& list, int simult)
                 curl_easy_setopt(curl_arr[i_curl], CURLOPT_URL, url);
                 curl_easy_setopt(curl_arr[i_curl], CURLOPT_WRITEFUNCTION, write_data);
 
-                int index = pos_finder(list[url_index]);
-                string tmp = list[url_index].substr(index, list[url_index].length() - 1);
+                int index = pos_finder(list[url_index], '/');
+                string file_name = list[url_index].substr(index, list[url_index].length() - 1);
                 for(int ch_ind = 0; ch_ind < 10; ch_ind++)
                 {
-                    std::replace(tmp.begin(), tmp.end(), proh_symb[ch_ind], '_');
+                    std::replace(file_name.begin(), file_name.end(), proh_symb[ch_ind], '_');
                 }
-                string to_save = path_to_dir + "\\" + tmp;
+                string to_save = path_to_dir + "\\" + file_name;
                 const char* to_dir = to_save.c_str();
                 url_index++;
+                
+                FILE *check = fopen(to_dir,"r");
+                int copy_idx = 1;
+                while(check)
+                {
+                    int point_idx = pos_finder(file_name, '.');
+                    string file_format = file_name.substr(point_idx, file_name.length() - 1);
+                    string file_true_name = file_name.substr(0, point_idx - 1);
+                    string idx = std::to_string(copy_idx);
+                    to_save = path_to_dir + "\\" + file_true_name + '(' + idx + ')' + '.' + file_format;
+                    to_dir = to_save.c_str();
+                    check = fopen(to_dir, "r");
+                    if(check)
+                    {
+                        copy_idx++;
+                    }
+                }
 
                 FILE *file = fopen(to_dir, "wb");
                 if(!file)
@@ -222,56 +258,57 @@ void saver_multi(string path_to_dir, const vector<string>& list, int simult)
                     multi_clear(pCurl_Arr, &multi, simult);
                     curl_multi_cleanup(multi);
                     curl_global_cleanup();
-                    string err = "ERROR: Path to destination directory \"" + path_to_dir + "\" is invalid to continue. Possible cause: directory is forbbiden for use.";
+                    string err = "ERROR: Path to destination directory \"" + to_save + "\" is invalid to continue. Possible cause: directory is forbbiden for use.";
                     throw err; 
                 }
                 curl_easy_setopt(curl_arr[i_curl], CURLOPT_WRITEDATA, file);
                 curl_multi_add_handle(multi, curl_arr[i_curl]);
-                added_file++;
-                cout << "File \"" << tmp << "\" successfuly added to download." << endl;
+                cout << "File \"" << file_name << "\" successfuly added to download." << endl;
                 fclose(file);
                 url = NULL;
                 to_dir = NULL;
             }
             else
             {
-                cout << "ERROR: connection failed for Curl." << endl;
+                multi_clear(pCurl_Arr, &multi, simult);
+                curl_multi_cleanup(multi);
+                curl_global_cleanup();
+                string err = "ERROR: connection failed for Curl.";
+                throw err;
+
             }
         }
 
         cout << "Start fetching added files. . ." << endl;
 
-        int running_handles;
         struct CURLMsg *msg;
         int msgq = 0;
+        int still_running = 1;
+        while(still_running)
+        {
+            CURLMcode mc = curl_multi_perform(multi, &still_running);
+
+            if(still_running)
+            {
+                mc = curl_multi_poll(multi, NULL, 0, 1000, NULL);
+                if(mc) break;
+            }
+        } 
+
         do
         {
-            CURLMcode mc = curl_multi_perform(multi, &running_handles);
-            while((msg = curl_multi_info_read(multi, &msgq)) != NULL)//Why this is not working???
+            msg = curl_multi_info_read(multi, &msgq);
+            if(msg && (msg->msg == CURLMSG_DONE))
             {
-                if(msg->msg == CURLMSG_DONE)
-                {
-                    CURL *e = msg->easy_handle;
-                    char *r_url;
-                    curl_easy_getinfo(e, CURLINFO_PRIVATE, &r_url);
-                    cout << "File on URL: \"" << r_url << "\" was downloaded with result \'" << curl_easy_strerror(msg->data.result) << "\'!" << endl;
-                    curl_easy_cleanup(e);
-                }
+                char *r_url;
+                curl_easy_getinfo(msg->easy_handle, CURLINFO_EFFECTIVE_URL, &r_url);
+                cout << "Download for URL: \"" << r_url << "\" ended with \'" << curl_easy_strerror(msg->data.result) << "\'!" << endl;
+                added_file--;
             }
-          
-            if(mc == CURLM_OK)
-            {
-                cout << "End of current que." << endl << endl;
-                break;
-            }
-            else
-            {
-                cout << "Download for this que failed with code " << (int)mc << "!" << endl << endl;
-            }
-        } while(running_handles);
-
+        } while(added_file);
+         
         multi_clear(pCurl_Arr, &multi, simult);
-
+        cout << "End of current que." << endl << endl;
         lenght -= simult;
         if(lenght < 0)
         {
@@ -293,7 +330,7 @@ size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream)
 
 int main()
 {
-    int clock_begin, clock_end;
+    int clock_begin;
     clock_begin = clock();
     cout << "File Transfer. Starting programm. . ." << endl \
     << "Please enter: The path to file with URLs; Path to directory; Number of files to download simultaneously:" << endl;
@@ -302,7 +339,13 @@ int main()
     string ptd;
     int fl_amt;
     
-    cin >> pth >> ptd >> fl_amt;
+    cin >> pth >> ptd;
+    while(!(cin >> fl_amt))
+    {
+        cin.clear(); 
+        cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        cout << "Invalid number input; please re-enter:\n";
+    }
     cout << endl;
     if(fl_amt > 999)
     {
@@ -335,7 +378,7 @@ int main()
         return 1;
     }
 
-    clock_end = clock();
+    int clock_end = clock();
 
     cout << "End of programm. . ." << endl << "Programm worked for: " << diffclock(clock_end, clock_begin) << "ms." << endl;
 
