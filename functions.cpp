@@ -42,6 +42,7 @@ string dir_creator(string path_to_dir)//to create new directory or to use one th
             
         
     }
+    cout << endl;
     return path_to_dir;
 }
 
@@ -86,6 +87,8 @@ void saver(string path_to_dir,  const vector<string>&list)//individual file down
     curl_global_init(CURL_GLOBAL_ALL);
     CURL *curl = curl_easy_init();
     curl_easy_setopt(curl, CURLOPT_VERBOSE, true);//additional info about connection
+    char errbuffer[CURL_ERROR_SIZE+1] = {};
+    curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuffer);
     path_to_dir = dir_creator(path_to_dir); 
     char proh_symb[] = {'\\', '/', ':', '*', '?', '\"','<', '>', '|', '+'};//prohibited symbols for creating a file in Windows
     if(curl)
@@ -138,7 +141,8 @@ void saver(string path_to_dir,  const vector<string>&list)//individual file down
             CURLcode res = curl_easy_perform(curl); 
             if (res != CURLE_OK) 
             {
-                cout << "Download of file \"" << url << "\" failed with error \'" << curl_easy_strerror(res) <<"\'!" << endl;
+                cout << "Download of file: " << endl << "\"" << url << "\"" << endl << "...failed with error:" << endl << "\'" << curl_easy_strerror(res) <<"\'" << endl;
+                cout << "SSL errors buffer result: " << endl << errbuffer << endl;
                 cout << "Moving to next URL. . ." << endl << endl;
             }
             else
@@ -199,6 +203,7 @@ void saver_multi(string path_to_dir, const vector<string>& list, int simult)//fo
                 curl_easy_setopt(curl_arr[i_curl], CURLOPT_URL, url);
                 curl_easy_setopt(curl_arr[i_curl], CURLOPT_WRITEFUNCTION, write_data);
                 curl_easy_setopt(curl_arr[i_curl], CURLOPT_ERRORBUFFER, errbuffer);
+                curl_easy_setopt(curl_arr[i_curl], CURLOPT_VERBOSE, true);
 
                 int index = pos_finder(list[url_index], '/');
                 string file_name = list[url_index].substr(index, list[url_index].length() - 1);
@@ -256,8 +261,7 @@ void saver_multi(string path_to_dir, const vector<string>& list, int simult)//fo
 
             }
         }
-
-        cout << "Start fetching added files. . ." << endl;
+        cout << endl << "Start fetching added files. . ." << endl;
 
         struct CURLMsg *msg;
         int msgq = 0;
@@ -280,7 +284,8 @@ void saver_multi(string path_to_dir, const vector<string>& list, int simult)//fo
             {
                 char *r_url;
                 curl_easy_getinfo(msg->easy_handle, CURLINFO_EFFECTIVE_URL, &r_url);
-                cout << "Download for URL: \"" << r_url << "\" ended with \'" << curl_easy_strerror(msg->data.result) << "\'!" << endl;
+                cout << "Download for URL: \"" << r_url << "\""  << endl << "...ended with:" << endl << "\'" << curl_easy_strerror(msg->data.result) << "\'" << endl;
+                cout << "SSL errors buffer result: " << endl << errbuffer << endl << endl;
                 added_file--;
             }
         } while(added_file);
@@ -295,7 +300,6 @@ void saver_multi(string path_to_dir, const vector<string>& list, int simult)//fo
     }
 
     cout << "All URLs were used." << endl;
-    cout << "SSL errors buffer: " << errbuffer << endl << endl;
     curl_multi_cleanup(multi);
     curl_global_cleanup();
 }

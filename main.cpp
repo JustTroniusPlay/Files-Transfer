@@ -55,4 +55,4 @@ int main()
     cout << "End of programm. . ." << endl << "Programm worked for: " << diffclock(clock_end, clock_begin) << "ms." << endl;
 
     return 0;
-}
+} 
