@@ -27,6 +27,6 @@ int pos_finder(const string&, char);
 
 string dir_creator(string);
 
-size_t write_data(void *, size_t, size_t, FILE *);
+static size_t write_data(void *, size_t, size_t, void *);
 
 static double diffclock(clock_t, clock_t);
