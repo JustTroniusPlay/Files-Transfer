@@ -99,7 +99,7 @@ void saver(string path_to_dir,  const vector<string>&list)//individual file down
         {
             const char* url = str.c_str();
             curl_easy_setopt(curl, CURLOPT_URL, url);
-            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
+            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &write_data);
 
             int index = pos_finder(str, '/');
             string file_name = str.substr(index, str.length() - 1);
@@ -138,7 +138,7 @@ void saver(string path_to_dir,  const vector<string>&list)//individual file down
                 string err = "ERROR: Path to destination directory \"" + path_to_dir + "\" is invalid to continue. Possible cause: directory is forbbiden for use.";
                 throw err; 
             }
-            curl_easy_setopt(curl, CURLOPT_WRITEDATA, file);
+            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &file);
             cout << "Start fetching file. . ." << endl;
             CURLcode res = curl_easy_perform(curl); 
             if (res != CURLE_OK) 
@@ -310,8 +310,12 @@ void saver_multi(string path_to_dir, const vector<string>& list, int simult)//fo
 }
 
 // Callback function to handle downloaded data
-static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream) 
+static size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream) 
 {
-    size_t written = fwrite(ptr, size, nmemb, (FILE *)stream);
+    size_t written = fwrite(ptr, size, nmemb, stream);
+    if(ferror(stream))
+    {
+        cout << "Writing to file was not succesful." << endl;
+    }
     return written;
 }
