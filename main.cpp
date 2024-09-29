@@ -35,14 +35,7 @@ int main()
     try
     {
         reader(pth, url_list);
-        if(fl_amt > 1)
-        {
-            saver_multi(ptd, url_list, fl_amt);
-        }
-        else
-        {
-            saver(ptd, url_list);
-        }
+        saver(ptd, url_list, fl_amt);
     }
     catch(string err)
     {   
