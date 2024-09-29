@@ -34,22 +34,22 @@ You can watch this [video](https://youtu.be/H1naJEHsxbQ?si=NF3JLHCiIbm1qRF9) I u
 4) Click "Configure" and choose "Specify native compilers". If everything correct programm will find needed compilers. Click "Finish" and wait.
 5) Find "CMAKE_INSTALL_PREFIX" in CMake gui and paste there a path to folder where you want to compiled library to be.
     *! For libcurl find another thing called "CURL_USE_MBEDTLS" and click checkbox there so libcurl can use mbedtls.
-7) Click "Configure" and than "Generate".
-8) Open GitBash in "build" folder and use next commands:
+6) Click "Configure" and than "Generate".
+7) Open GitBash in "build" folder and use next commands:
    * mingw32-make
    * mingw32-make install
    After that in directory on step 5) you will see compiled library.
-9) After building MbedTLS repeat 1-7 steps for libcurl.
-10) Go to Environment Variables and find CMAKE_PREFIX_PATH(or create if it not exist) and put there a paths to your compiled libraries folders.
-11) Than still here in EV find Path. Find "bin" folders in compiled libraries folders and paste them in Path.
-12) Than find "cmake" in "lib" folder in your compiled libcurl folder. Open file "CURLTargets.cmake" and find this line:
+8) After building MbedTLS repeat 1-7 steps for libcurl.
+9) Go to Environment Variables and find CMAKE_PREFIX_PATH(or create if it not exist) and put there a paths to your compiled libraries folders.
+10) Than still here in EV find Path. Find "bin" folders in compiled libraries folders and paste them in Path.
+11) Than find "cmake" in "lib" folder in your compiled libcurl folder. Open file "CURLTargets.cmake" and find this line:
     add_library(CURL::libcurl SHARED IMPORTED)
-    Copy "CURL::libcurl" or sinilar thing if it slightly changed to libcurl_shared.
-13) Download files of this rep, save them somewhere, open file CMakeLists.txt and find "target_link_libraries(a CURL::libcurl)". If "CURL::libcurl" different from what you copied just replace it in this file.
-14) Open GitBush in this folder and use next commands:
+    Copy "CURL::libcurl" or similar thing if it slightly changed to libcurl_shared.
+12) Download files of this rep, save them somewhere, open file CMakeLists.txt and find "target_link_libraries(a CURL::libcurl)". If "CURL::libcurl" different from what you copied just replace it in this file.
+13) Open GitBush in this folder and use next commands:
     * cmake -G"MinGW Makefile" .
     * "make" or "mingw32-make"
-15) Add path to FilesTransfer.exe to Environment Variables in Path so you can call programm in console whenever you want.
+14) Add path to FilesTransfer.exe to Environment Variables in Path so you can call program in console whenever you want.
 
 
 
