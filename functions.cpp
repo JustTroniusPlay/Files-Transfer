@@ -2,10 +2,10 @@
 
 void multi_clear(CURL** curl_arr, CURLM* multi, int save_amount)//to clear all curl handless from multi
 {
-    for(int i_curl = 0; i_curl < save_amount; i_curl++)
+    for(int id_download = 0; id_download < save_amount; id_download++)
     {
-        curl_multi_remove_handle(multi, &curl_arr[i_curl]);
-        curl_easy_cleanup(&curl_arr[i_curl]);
+        curl_multi_remove_handle(multi, &curl_arr[id_download]);
+        curl_easy_cleanup(&curl_arr[id_download]);
     }
 }
 
@@ -188,11 +188,12 @@ void saver(string&path_to_dir, const vector<string>& list, int simult)//for mult
     CURLM *multi = curl_multi_init();
     curl_multi_setopt(multi, CURLMOPT_MAXCONNECTS, simult);
 
-    FILE *file;
     CURL *curl_arr[999];
+    FILE *files[999];
     CURL **pCurl_Arr = curl_arr;
     int added_file = simult;
     char errbuffer[CURL_ERROR_SIZE+1] = {};
+    char *errbuffers[999];
 
     if(simult > list.size())
     {
@@ -210,19 +211,22 @@ void saver(string&path_to_dir, const vector<string>& list, int simult)//for mult
             added_file = simult;
         }
         cout << "Starting adding files to que." << endl << endl;
-        for(int i_curl = 0; i_curl < simult; i_curl++)
+        for(int id_download = 0; id_download < simult; id_download++)
         {
-            curl_arr[i_curl] = curl_easy_init();
-            if(curl_arr[i_curl])
+            curl_arr[id_download] = curl_easy_init();
+            if(curl_arr[id_download])
             {
                 const char* url = list[url_index].c_str();
                 string to_save = to_dir_checked(list[url_index], path_to_dir);
                 const char* to_dir = to_save.c_str();
 
-                file = fopen(to_dir, "wb");
-                if(!file)
+                files[id_download] = fopen(to_dir, "wb");
+                if(!files[id_download])
                 {
-                    fclose(file);
+                    for(int f_id = 0; f_id < url_index; f_id++)
+                    {  
+                        fclose(files[f_id]);
+                    }
                     url = NULL;
                     to_dir = NULL;
                     multi_clear(pCurl_Arr, &multi, simult);
@@ -232,13 +236,15 @@ void saver(string&path_to_dir, const vector<string>& list, int simult)//for mult
                     throw err; 
                 }
 
-                curl_easy_setopt(curl_arr[i_curl], CURLOPT_URL, url);
-                curl_easy_setopt(curl_arr[i_curl], CURLOPT_WRITEFUNCTION, write_data);
-                curl_easy_setopt(curl_arr[i_curl], CURLOPT_ERRORBUFFER, errbuffer);
-                curl_easy_setopt(curl_arr[i_curl], CURLOPT_CAINFO, "./ca-bundle.crt");
-                curl_easy_setopt(curl_arr[i_curl], CURLOPT_WRITEDATA, file);
-                //curl_easy_setopt(curl_arr[i_curl], CURLOPT_VERBOSE, true);//for adittional debug info
-                curl_multi_add_handle(multi, curl_arr[i_curl]);
+                curl_easy_setopt(curl_arr[id_download], CURLOPT_URL, url);
+                curl_easy_setopt(curl_arr[id_download], CURLOPT_WRITEFUNCTION, write_data);
+                errbuffers[id_download] = errbuffer;
+                curl_easy_setopt(curl_arr[id_download], CURLOPT_ERRORBUFFER, errbuffers[id_download]);
+                curl_easy_setopt(curl_arr[id_download], CURLOPT_CAINFO, "./ca-bundle.crt");
+                curl_easy_setopt(curl_arr[id_download], CURLOPT_WRITEDATA, files[id_download]);
+                curl_easy_setopt(curl_arr[id_download], CURLOPT_HEADER, 0L);
+                //curl_easy_setopt(curl_arr[id_download], CURLOPT_VERBOSE, true);//for adittional debug info
+                curl_multi_add_handle(multi, curl_arr[id_download]);
                 cout << "File \"" << url << "\" successfuly added to download." << endl;
                 url = NULL;
                 to_dir = NULL;
@@ -269,7 +275,7 @@ void saver(string&path_to_dir, const vector<string>& list, int simult)//for mult
                 if(mc) break;
             }
         } 
-
+        int buffer_id = 0;
         do
         {
             msg = curl_multi_info_read(multi, &msgq);
@@ -278,12 +284,15 @@ void saver(string&path_to_dir, const vector<string>& list, int simult)//for mult
                 char *r_url;
                 curl_easy_getinfo(msg->easy_handle, CURLINFO_EFFECTIVE_URL, &r_url);
                 cout << "Download for URL: \"" << r_url << "\""  << endl << "...ended with:" << endl << "\'" << curl_easy_strerror(msg->data.result) << "\'" << endl;
-                cout << "Errors buffer result: " << endl << errbuffer << endl << endl;
+                cout << "Errors buffer result: " << endl << errbuffers[buffer_id] << endl << endl;
+                
+                buffer_id++;
                 added_file--;
             }
         } while(added_file);
          
         multi_clear(pCurl_Arr, &multi, simult);
+
         cout << "End of current que." << endl << endl;
         lenght -= simult;
         if(lenght < 0)
@@ -293,15 +302,18 @@ void saver(string&path_to_dir, const vector<string>& list, int simult)//for mult
     }
 
     cout << "All URLs were used." << endl;
-    fclose(file);
+    for(int f_id = 0; f_id < list.size(); f_id++)
+    {  
+        fclose(files[f_id]);
+    }
     curl_multi_cleanup(multi);
     curl_global_cleanup();
 }
 
 // Callback function to handle downloaded data
-static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream) 
+static size_t write_data(void *contents, size_t size, size_t nmemb, void *stream) 
 {
-    size_t written = fwrite(ptr, size, nmemb, (FILE *)stream);
+    size_t written = fwrite(contents, size, nmemb, (FILE *)stream);
     if(ferror((FILE *)stream))
     {
         cout << "Writing to file was not succesful." << endl;
